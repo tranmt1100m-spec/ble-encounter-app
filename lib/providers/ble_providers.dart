@@ -14,7 +14,6 @@ import '../models/own_profile.dart';
 import '../models/encounter_record.dart';
 import '../models/template_message.dart';
 import '../services/advertiser.dart';
-import '../services/avatar_service.dart';
 import '../services/badge_service.dart';
 import '../services/data_export_service.dart';
 import '../services/game_storage.dart';
@@ -22,7 +21,7 @@ import '../services/piece_storage.dart';
 import '../services/scanner.dart';
 import '../services/profile_storage.dart';
 import '../services/notification_service.dart';
-import '../services/supabase_service.dart';
+import '../services/api_service.dart';
 import '../services/token_service.dart';
 import 'puzzle_providers.dart';
 
@@ -239,7 +238,7 @@ class AppNotifier extends Notifier<AppState> {
     final p = state.ownProfile;
     if (p == null) return;
     final dotAvatar = await DotAvatarStorage.load();
-    SupabaseService.syncProfile(
+    ApiService.syncProfile(
       displayName: p.name,
       colorIndex:  p.colorIndex,
       badgeLevel:  AppBadge.badgeLevelFrom(state.badges),
@@ -337,9 +336,6 @@ class AppNotifier extends Notifier<AppState> {
       _startAutoResolve();
 
       await NotificationService.scheduleGateNotifications();
-
-      // 未送信のアイコンがあれば自動アップロード（初回設定時オフライン対策）
-      AvatarService.retryPendingUpload();
 
       // バッジレベル＋ドット絵をサーバーに同期（相手側の Today/広場/カケラ表示用）
       _syncProfileToServer();
@@ -537,7 +533,7 @@ class AppNotifier extends Notifier<AppState> {
 
     // バッジが増えたらサーバーにも反映（相手の広場に表示されるため）
     if (newlyEarned.isNotEmpty && state.ownProfile != null) {
-      SupabaseService.syncProfile(
+      ApiService.syncProfile(
         displayName: state.ownProfile!.name,
         colorIndex:  state.ownProfile!.colorIndex,
         badgeLevel:  AppBadge.badgeLevelFrom(updatedBadges),

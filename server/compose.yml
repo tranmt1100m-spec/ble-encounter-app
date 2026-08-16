@@ -1,0 +1,75 @@
+# はじめましてこんにちは — サーバー構成
+#
+#   Internet :443 ──> Caddy（自動TLS / セキュリティヘッダ / gzip / レート制限の外壁）
+#                        └─ 内部ネットワーク ─> api（外部ポート非公開）
+#                                                  └─ SQLite（named volume）
+#
+# 共有サーバーのため、CPU/メモリ上限とログ上限を明示して他ユーザーに影響を出さない。
+
+services:
+  api:
+    build: .
+    image: hajimemashite-api:latest
+    container_name: hajime-api
+    restart: unless-stopped
+    # 外部にポートを出さない。到達経路は caddy 経由のみ。
+    expose:
+      - "8080"
+    volumes:
+      - api-data:/data
+    networks:
+      - internal
+    # ─── セキュリティ強化 ───
+    read_only: true          # ルートFSは読み取り専用（書けるのは /data のみ）
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # ─── 資源上限（共有サーバー配慮）───
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 256M
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "3" }
+    healthcheck:
+      # scratchイメージにcurlは無いので、api自身のTCP待受をcaddy側で監視する。
+      # ここではプロセス生存のみをdockerに任せる。
+      disable: true
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: hajime-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"     # ACME(Let's Encrypt)チャレンジ + HTTPSへのリダイレクト
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data      # 証明書（消すと再取得になるので永続化）
+      - caddy-config:/config
+    networks:
+      - internal
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 128M
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "3" }
+    depends_on:
+      - api
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  api-data:
+  caddy-data:
+  caddy-config:

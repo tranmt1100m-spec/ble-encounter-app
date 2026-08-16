@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'core/peer_id.dart';
 import 'services/notification_service.dart';
-import 'services/supabase_service.dart';
+import 'services/api_service.dart';
 import 'services/token_service.dart';
 import 'app.dart';
 
@@ -25,9 +25,9 @@ void main() async {
   // Heavy: timezone DB load + plugin init runs after first frame
   NotificationService.init();
 
-  // Supabase + rotating token init（オフライン時は永続PeerIdにフォールバック）
+  // 自前APIサーバー + 回転トークン初期化（オフライン時は永続PeerIdにフォールバック）
   try {
-    await SupabaseService.init();
+    await ApiService.init();
     await TokenService.init();
   } catch (e) {
     debugPrint('[main] server init error (offline?): $e');

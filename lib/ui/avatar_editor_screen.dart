@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/dot_avatar.dart';
 import '../models/piece_data.dart';
-import '../services/supabase_service.dart';
+import '../services/api_service.dart';
 import 'theme/palette.dart';
 import 'widgets/ui_kit.dart';
 import 'widgets/user_icon.dart';
@@ -100,7 +100,7 @@ class _AvatarEditorScreenState extends State<AvatarEditorScreen> {
     // サーバーへ同期（すれ違った相手の Today/広場/カケラ にこの絵が表示される）
     // 失敗しても起動時 start() で再同期されるため best-effort
     if (!_avatar.isEmpty) {
-      SupabaseService.savePieceData(_avatar.toPiecePixels());
+      ApiService.savePieceData(_avatar.toPiecePixels());
     }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(

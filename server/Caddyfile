@@ -1,0 +1,49 @@
+# Caddy — 自動TLS付きリバースプロキシ
+# ドメインは sslip.io（IPをそのまま名前に変換する公開DNS）。
+# 独自ドメインを取得したらこのホスト名を差し替えるだけで移行できる。
+
+{
+	# ACMEの連絡先メールは設定しない（未設定でも証明書は取得できる）。
+	# 不正な形式を入れると Let's Encrypt / ZeroSSL 双方で発行が失敗するため注意。
+	# 管理APIは外に出さない
+	admin off
+	servers {
+		# 実IPはCaddyがX-Forwarded-Forに載せる。APIはその先頭のみ信頼する。
+		trusted_proxies static private_ranges
+	}
+}
+
+153-125-148-69.sslip.io {
+	encode gzip
+
+	# ─── セキュリティヘッダ ───
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options    "nosniff"
+		X-Frame-Options           "DENY"
+		Referrer-Policy           "no-referrer"
+		Content-Security-Policy   "default-src 'none'; frame-ancestors 'none'"
+		# サーバー実装を隠す
+		-Server
+	}
+
+	# APIのみ公開。それ以外のパスは404で即返し、探索コストを与えない。
+	handle /v1/* {
+		reverse_proxy api:8080 {
+			header_up X-Forwarded-For {remote_host}
+		}
+	}
+
+	handle {
+		respond 404
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 5mb
+			roll_keep 3
+		}
+		# 個人情報を残さないため、リクエストヘッダは記録しない
+		format json
+	}
+}

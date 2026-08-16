@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/piece_data.dart';
 import 'piece_storage.dart';
-import 'supabase_service.dart';
+import 'api_service.dart';
 
 /// サーバーから解析されたユーザー情報
 class ResolvedProfile {
@@ -36,7 +36,7 @@ class EncounterResolver {
     if (tokens.isEmpty) return [];
 
     debugPrint('[Resolver] resolving ${tokens.length} pending tokens...');
-    final resolved = await SupabaseService.resolveTokens(tokens);
+    final resolved = await ApiService.resolveTokens(tokens);
 
     // 通信エラー（オフライン等）: トークンを削除せず次回に持ち越す。
     // ここで削除するとすれ違いデータが永久に失われる。
@@ -48,7 +48,7 @@ class EncounterResolver {
     final existing   = await PuzzlePieceStorage.load();
     final updated    = List<PuzzlePiece>.from(existing);
     final newPieces  = <PuzzlePiece>[];
-    final myUid      = SupabaseService.userId;
+    final myUid      = ApiService.userId;
 
     for (int i = 0; i < resolved.length; i++) {
       final r = resolved[i];

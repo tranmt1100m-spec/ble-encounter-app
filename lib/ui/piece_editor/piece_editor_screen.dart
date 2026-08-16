@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/piece_data.dart';
 import '../../services/piece_storage.dart';
-import '../../services/supabase_service.dart';
+import '../../services/api_service.dart';
 import '../../providers/ble_providers.dart' show appProvider;
 
 // ─── Provider ───────────────────────────────────────────────────────────────
@@ -103,12 +103,12 @@ class _PieceEditorScreenState extends ConsumerState<PieceEditorScreen> {
     setState(() => _saving = true);
     final piece = ref.read(_editorProvider).piece;
     await OwnPieceStorage.save(piece);
-    final ok = await SupabaseService.savePieceData(piece.toJson());
+    final ok = await ApiService.savePieceData(piece.toJson());
 
     // プロフィールと同期
     final profile = ref.read(appProvider).ownProfile;
     if (profile != null) {
-      await SupabaseService.syncProfile(
+      await ApiService.syncProfile(
         displayName: profile.name,
         colorIndex:  profile.colorIndex,
         piecePixels: piece.toJson(),

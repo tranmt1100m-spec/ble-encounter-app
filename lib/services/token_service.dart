@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/peer_id.dart';
-import 'supabase_service.dart';
+import 'api_service.dart';
 
 /// BLEで流す使い捨てトークンを管理する。
 /// サーバー未接続時は永続PeerIdにフォールバックし、既存機能を維持する。
@@ -39,7 +39,7 @@ class TokenService {
   }
 
   static Future<void> refresh() async {
-    final newToken = await SupabaseService.issueToken();
+    final newToken = await ApiService.issueToken();
     if (newToken == null) {
       debugPrint('[Token] refresh failed → using permanent PeerId');
       return;
