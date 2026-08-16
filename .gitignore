@@ -64,3 +64,8 @@ android/key.properties
 android/keystore/
 qa_out/
 qa_baseline/
+
+# サーバー運用の秘密情報（絶対にコミットしない）
+server/backup/rclone.conf
+server/backup/staging/
+server/backup/*.log

@@ -107,6 +107,60 @@ docker compose up -d
 
 ---
 
+## バックアップ（Google Drive・毎日自動）
+
+サーバー内の7世代だけではVPS自体が失われたときに復元できないため、
+暗号化したうえでGoogle Driveへ退避している。
+
+```
+APIコンテナ（6時間ごと VACUUM INTO）
+  └─ /data/backups/app-YYYYMMDD.db
+        └─ backup.sh（cron 毎日4:10）
+              └─ rclone crypt で暗号化 ─> Google Drive「hajimemashite-backup」
+```
+
+| 項目 | 設定 |
+|---|---|
+| 実行 | `crontab` で毎日 4:10（`~/hajimemashite/server/backup/backup.sh`） |
+| 暗号化 | rclone crypt。**内容もファイル名もDrive上では判読不能** |
+| Drive権限 | `drive.file` スコープのみ。**rcloneが作成したファイル以外は読めない** |
+| 世代管理 | リモート30日・サーバー内7世代 |
+| rclone | ホストに入れずコンテナ実行（`rclone/rclone`） |
+| 認証情報 | `backup/rclone.conf`（`chmod 600`・**Git管理外**） |
+| ログ | `backup/backup.log`（直近500行のみ保持） |
+
+**復号キーの保管場所**: `C:\Users\ifjvm\Documents\hajimemashite-backup-key.txt`
+これが無いと復元できない。
+
+### 復元手順
+
+```bash
+# サーバー上で（設定済みのrclone.confを使う）
+cd ~/hajimemashite/server/backup
+docker run --rm -v $PWD/rclone.conf:/config/rclone/rclone.conf:ro \
+  rclone/rclone lsl gdrive-crypt:hajimemashite          # 世代一覧
+docker run --rm -v $PWD/rclone.conf:/config/rclone/rclone.conf:ro -v $PWD/restore:/out \
+  rclone/rclone copy gdrive-crypt:hajimemashite/app-YYYYMMDD.db /out
+
+# 反映
+cd ~/hajimemashite/server && docker compose down
+docker run --rm -v server_api-data:/d -v ~/hajimemashite/server/backup/restore:/r alpine \
+  sh -c 'cp /r/app-YYYYMMDD.db /d/app.db && rm -f /d/app.db-wal /d/app.db-shm && chown 10001:10001 /d/app.db'
+docker compose up -d
+```
+
+サーバーごと失った場合は、別マシンにrcloneを入れて復号キーで
+`gdrive-crypt` リモートを再作成すれば同じ手順で取り出せる。
+
+### 既知の注意点
+
+rcloneの共有client_idは**2026年中に廃止予定**という警告が出ている。
+廃止されるとアップロードが止まるため、その前にGoogle Cloud Consoleで
+独自client_idを作成して `rclone.conf` の `[gdrive]` に追記する必要がある。
+（`client_id` と `client_secret` の2行を足すだけ。再認証は必要）
+
+---
+
 ## 独自ドメインへ移行する場合
 
 1. DNSのAレコードを`153.125.148.69`に向ける
