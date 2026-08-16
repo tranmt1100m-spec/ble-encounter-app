@@ -152,12 +152,20 @@ docker compose up -d
 サーバーごと失った場合は、別マシンにrcloneを入れて復号キーで
 `gdrive-crypt` リモートを再作成すれば同じ手順で取り出せる。
 
-### 既知の注意点
+### client_id について（対応済み）
 
-rcloneの共有client_idは**2026年中に廃止予定**という警告が出ている。
-廃止されるとアップロードが止まるため、その前にGoogle Cloud Consoleで
-独自client_idを作成して `rclone.conf` の `[gdrive]` に追記する必要がある。
-（`client_id` と `client_secret` の2行を足すだけ。再認証は必要）
+rcloneの共有client_idは2026年中に廃止予定のため、**独自のclient_idへ移行済み**。
+Google Cloud上のプロジェクト `hajimemashite-backup` で発行したデスクトップアプリ用
+クライアントを `rclone.conf` の `[gdrive]` に設定している。
+
+**移行時の注意**: `drive.file` スコープは「**そのclient_idが作成したファイル**」しか
+見えない。client_idを変えると過去のアップロード分は一覧に出てこなくなる
+（`directory not found` になる）ため、移行後は一度アップロードし直す必要がある。
+旧クライアントで作ったファイルはDrive上に残るので、不要なら手動で削除する。
+
+**OAuth同意画面は「本番環境」にしておくこと**。「テスト」のままだと
+リフレッシュトークンが7日で失効し、バックアップが毎週止まる。
+`drive.file` は審査不要のスコープなので本番公開しても待ちは発生しない。
 
 ---
 
