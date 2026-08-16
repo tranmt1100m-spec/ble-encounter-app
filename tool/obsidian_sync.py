@@ -44,6 +44,9 @@ DOCS = {
     "PLAZA_DESIGN.md": "広場育成システム設計",
     "PREFECTURE_PLAN.md": "47都道府県設計",
     "CHANGELOG.md": "変更履歴（生）",
+    "CLAUDE.md": "恒久ルール",
+    "DESIGN_HANDOFF.md": "デザイン引き継ぎ手順",
+    "server/README.md": "サーバー運用手順",
 }
 
 
@@ -83,7 +86,8 @@ def sync_docs() -> list[str]:
         if not src.exists():
             continue
         body = src.read_text(encoding="utf-8")
-        slug = src_name.replace(".md", "").lower().replace("_", "-")
+        # server/README.md のようなサブディレクトリ配下も1ファイルへ平坦化する
+        slug = src_name.replace(".md", "").lower().replace("_", "-").replace("/", "-")
         out = DEST / "docs" / f"{slug}.md"
         out.write_text(fm(label, ["ble-encounter-app", "docs"]) + body, encoding="utf-8")
         synced.append(f"docs/{slug}|{label}")
