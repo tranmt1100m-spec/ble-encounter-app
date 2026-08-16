@@ -23,23 +23,46 @@ class ApiService {
   static String? _apiKey;
   static String? _userId;
 
+  /// 多重実行防止。init / 匿名登録が同時に走っても実際の処理は1回だけにする。
+  /// これが無いと、保存前の read が null を返した分だけ匿名登録が重複し、
+  /// 起動のたびに別人格が量産される（＝発行したトークンが解決できなくなる）。
+  static Future<void>? _initFuture;
+  static Future<bool>? _signUpFuture;
+
   static String? get userId => _userId;
   static bool get isReady => _apiKey != null && _userId != null;
 
   /// 起動時に呼ぶ。保存済みの資格情報を復元し、無ければ匿名登録する。
-  static Future<void> init() async {
-    _apiKey = await _store.read(key: _keyApiKey);
-    _userId = await _store.read(key: _keyUserId);
-    if (_apiKey == null || _userId == null) {
-      await _signUpAnonymously();
-    } else {
+  /// 何度呼んでも初回の処理を共有する（副作用は起きない）。
+  static Future<void> init() => _initFuture ??= _init();
+
+  static Future<void> _init() async {
+    if (await _restore()) {
       debugPrint('[Api] restored uid=${_userId!.substring(0, 8)}');
+      return;
     }
+    await _signUpAnonymously();
+  }
+
+  /// 保存済み資格情報の読み出し。取得できた場合のみフィールドへ反映する
+  /// （null で上書きしないことが競合対策の要）。
+  static Future<bool> _restore() async {
+    final key = await _store.read(key: _keyApiKey);
+    final uid = await _store.read(key: _keyUserId);
+    if (key == null || uid == null) return false;
+    _apiKey = key;
+    _userId = uid;
+    return true;
   }
 
   /// 匿名ユーザーを新規作成（旧 signInAnonymously 相当）。
   /// 本名・メール・電話などは一切送らない（匿名性の維持）。
-  static Future<bool> _signUpAnonymously() async {
+  static Future<bool> _signUpAnonymously() =>
+      _signUpFuture ??= _doSignUp().whenComplete(() => _signUpFuture = null);
+
+  static Future<bool> _doSignUp() async {
+    // 直前に別経路が登録を終えていれば、それを使い回して新規作成しない
+    if (isReady || await _restore()) return true;
     try {
       final res = await http
           .post(Uri.parse('$apiBaseUrl/auth/anon'))
@@ -49,11 +72,17 @@ class ApiService {
         return false;
       }
       final m = jsonDecode(res.body) as Map<String, dynamic>;
-      _apiKey = m['api_key'] as String;
-      _userId = m['user_id'] as String;
-      await _store.write(key: _keyApiKey, value: _apiKey);
-      await _store.write(key: _keyUserId, value: _userId);
-      debugPrint('[Api] anonymous signup OK uid=${_userId!.substring(0, 8)}');
+      final key = m['api_key'] as String?;
+      final uid = m['user_id'] as String?;
+      if (key == null || uid == null) {
+        debugPrint('[Api] signup failed: malformed response');
+        return false;
+      }
+      await _store.write(key: _keyApiKey, value: key);
+      await _store.write(key: _keyUserId, value: uid);
+      _apiKey = key;
+      _userId = uid;
+      debugPrint('[Api] anonymous signup OK uid=${uid.substring(0, 8)}');
       return true;
     } catch (e) {
       debugPrint('[Api] signup error: $e');
