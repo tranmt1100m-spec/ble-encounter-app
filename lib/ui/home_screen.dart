@@ -8,6 +8,8 @@ import 'widgets/user_icon.dart';
 import 'today_screen.dart';
 import 'plaza_screen.dart';
 import 'minigame_screen.dart';
+import 'coming_soon_screen.dart';
+import '../core/ble_config.dart';
 import 'badge_screen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
@@ -27,7 +29,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   static const _screens = <Widget>[
     TodayScreen(),
     PlazaScreen(),
-    MinigameScreen(),
+    kGameTabEnabled
+        ? MinigameScreen()
+        : ComingSoonScreen(
+            title: 'ゲームセンター', asset: 'assets/icons/tab_game.png'),
     BadgeScreen(),
     PuzzleBoardScreen(),
     ProfileScreen(),

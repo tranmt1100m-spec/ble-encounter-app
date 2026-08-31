@@ -9,6 +9,13 @@ const int kScanOnSeconds = kDebugBle ? 12 : 15;
 // ゲート制御
 const bool kGateAlwaysOpen = kDebugBle; // デバッグ時は常時開放
 
+// ミニゲーム機能フラグ。
+// 4種のゲーム(ピース集め/タワーRPG/水族館/しんけいすいじゃく)は
+// 未検証の不具合が多く残っているため、リリースを急ぐ間は「近日公開」の
+// プレースホルダーに差し替える。falseにするだけで元の実装へ復帰できる
+// （lib/ui/home_screen.dart 参照）。ゲーム自体のコードは削除していない。
+const bool kGameTabEnabled = false;
+
 // ─── スキャン間隔設定 ──────────────────────────────────────────────────────────
 
 enum ScanInterval {
