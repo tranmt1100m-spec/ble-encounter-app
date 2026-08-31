@@ -142,6 +142,28 @@ class AppNotifier extends Notifier<AppState> {
     return DateTime(next.year, next.month, next.day, 9);
   }
 
+  /// 「きょうの広場」に並べる開門の一覧。
+  ///
+  /// 21時以降のすれ違いは [gateTimeFor] により翌朝9時の開門へ割り当てられる。
+  /// 今日の3つ（9/12/21）だけを並べると、21〜24時のすれ違いがどの行にも
+  /// 現れず、ユーザーからは「出会っているのに何も起きない」状態になる。
+  /// そのため21時を過ぎたら翌朝の開門も並べる。
+  ///
+  /// 不変条件: 任意の時刻 t について
+  /// `gatesToShow(t).contains(gateTimeFor(t))` が成り立つこと。
+  static List<DateTime> gatesToShow(DateTime now) {
+    final gates = [
+      DateTime(now.year, now.month, now.day, 9),
+      DateTime(now.year, now.month, now.day, 12),
+      DateTime(now.year, now.month, now.day, 21),
+    ];
+    if (now.hour >= 21) {
+      final t = now.add(const Duration(days: 1));
+      gates.add(DateTime(t.year, t.month, t.day, 9));
+    }
+    return gates;
+  }
+
   Future<void> _loadData() async {
     final profile   = await _storage.loadOwnProfile();
     var encounters  = await _storage.loadEncounters();

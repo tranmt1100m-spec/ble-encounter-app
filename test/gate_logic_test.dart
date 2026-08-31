@@ -69,4 +69,38 @@ void main() {
           DateTime(2026, 8, 1, 9));
     });
   });
+
+  group('【回帰】21時以降のすれ違いが画面から消えるバグ', () {
+    // 21〜24時のすれ違いは翌朝9時ゲートに割り当てられるが、
+    // 画面が「今日の9/12/21」しか並べていなかったため、どの行にも現れず
+    // 「出会っているのに何も起きない」状態になっていた。
+    test('22:00 時点の一覧に翌朝9時の開門が含まれる', () {
+      final gates = AppNotifier.gatesToShow(at(22));
+      expect(gates.contains(DateTime(2026, 7, 5, 9)), isTrue);
+    });
+
+    test('20:59 時点では翌朝の開門を並べない', () {
+      final gates = AppNotifier.gatesToShow(at(20, 59));
+      expect(gates.length, 3);
+      expect(gates.contains(DateTime(2026, 7, 5, 9)), isFalse);
+    });
+
+    test('不変条件: どの時刻のすれ違いも必ずいずれかの開門行に現れる', () {
+      for (var h = 0; h < 24; h++) {
+        for (final m in [0, 30, 59]) {
+          final t = at(h, m);
+          expect(
+            AppNotifier.gatesToShow(t).contains(AppNotifier.gateTimeFor(t)),
+            isTrue,
+            reason: '$h:$m のすれ違いがどの開門にも割り当たっていない',
+          );
+        }
+      }
+    });
+
+    test('月またぎでも翌朝の開門が正しい (7/31 22:00 → 8/1 9:00)', () {
+      final gates = AppNotifier.gatesToShow(DateTime(2026, 7, 31, 22));
+      expect(gates.last, DateTime(2026, 8, 1, 9));
+    });
+  });
 }

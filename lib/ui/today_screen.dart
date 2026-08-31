@@ -46,14 +46,8 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
 
   static DateTime _gateFor(DateTime t) => AppNotifier.gateTimeFor(t);
 
-  List<DateTime> _todayGates() {
-    final now = DateTime.now();
-    return [
-      DateTime(now.year, now.month, now.day, 9),
-      DateTime(now.year, now.month, now.day, 12),
-      DateTime(now.year, now.month, now.day, 21),
-    ];
-  }
+  /// 画面に並べる開門の一覧（判定は AppNotifier.gatesToShow に集約）。
+  List<DateTime> _todayGates() => AppNotifier.gatesToShow(DateTime.now());
 
   List<EncounterRecord> _forGate(List<EncounterRecord> enc, DateTime gate) =>
       enc.where((e) => _gateFor(e.lastMet) == gate).toList();
@@ -73,11 +67,18 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     ref.read(appProvider.notifier).revealToday();
   }
 
-  String _gateLabel(int hour) {
-    if (hour == 9) return '朝';
-    if (hour == 12) return '昼';
-    if (hour == 21) return '夜';
-    return '$hour:00';
+  String _gateLabel(DateTime gate) {
+    final now = DateTime.now();
+    final isTomorrow =
+        gate.year != now.year || gate.month != now.month || gate.day != now.day;
+    final base = gate.hour == 9
+        ? '朝'
+        : gate.hour == 12
+            ? '昼'
+            : gate.hour == 21
+                ? '夜'
+                : '${gate.hour}:00';
+    return isTomorrow ? 'あしたの$base' : base;
   }
 
   String _gateAsset(int hour) {
@@ -179,7 +180,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: _GatePanel(
                       asset: _gateAsset(gate.hour),
-                      label: _gateLabel(gate.hour),
+                      label: _gateLabel(gate),
                       hour: gate.hour,
                       isOpen: isOpen,
                       gateTime: gate,
